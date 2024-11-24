@@ -1,16 +1,12 @@
+#pragma once
+
 #include <cstdint>
 #include <cstring>
-#include "Platform.hpp"
-#include "AbstractI2C.hpp"
+#include <AbstractPlatform/common/Platform.hpp>
+#include <AbstractPlatform/common/PlatformLiteral.hpp>
+#include <AbstractPlatform/i2c/AbstractI2C.hpp>
 
-#ifdef __EXCEPTIONS
-#define NOEXCEPT noexcept
-#include <exception>
-#else
-#define NOEXCEPT
-#endif
-
-namespace ExternalDevice
+namespace ExternalHardware
 {
 
 class CSsd1306
@@ -111,4 +107,4 @@ private:
 #endif
 };
 
-}  // namespace ExternalDevice
+}  // namespace ExternalHardware
