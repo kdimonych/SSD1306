@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstring>
 #include <AbstractPlatform/common/Platform.hpp>
+#include <AbstractPlatform/common/ErrorCode.hpp>
 #include <AbstractPlatform/common/PlatformLiteral.hpp>
 #include <AbstractPlatform/i2c/AbstractI2C.hpp>
 
@@ -12,37 +13,6 @@ namespace ExternalHardware
 class CSsd1306
 {
 public:
-    static constexpr int KOk = 0;
-    static constexpr int KGenericError = -1;
-    static constexpr int KInvalidArgumentError = -2;
-    static constexpr int KInvalidVendor = -3;
-
-#ifdef __EXCEPTIONS
-    template < int taError, const char* const taDescription >
-    class EBase : public std::exception
-    {
-    public:
-        constexpr int
-        error( ) const NOEXCEPT
-        {
-            return taError;
-        }
-
-        const char*
-        what( ) const NOEXCEPT override
-        {
-            return taDescription;
-        }
-    };
-    static constexpr char KGenericErrorDescription[] = "Internal error";
-    static constexpr char KInvalidArgumentDescription[] = "Invalid argument";
-    static constexpr char KInvalidVendorDescription[] = "Invalid vendor";
-    using EGenericError = EBase< KGenericError, KGenericErrorDescription >;
-    using EInvalidArgumentError = EBase< KInvalidArgumentError, KInvalidArgumentDescription >;
-    using EInvalidVendorError = EBase< KInvalidVendor, KInvalidVendorDescription >;
-
-#endif
-
     static constexpr std::uint8_t KDefaultAddress = 0x40;  // A0 pulled to GND
     static constexpr std::uint8_t KVSAddress = 0x41;       // A0 pulled to VS
 
@@ -56,22 +26,22 @@ public:
 
     int Init( const CConfig& aConfig = { } ) NOEXCEPT;
 
-    inline int
+    inline AbstractPlatform::TErrorCode
     Reset( ) NOEXCEPT
     {
         // TODO: implement
-        return KOk;
+        return AbstractPlatform::KOk;
     }
 
-    inline int
+    inline AbstractPlatform::TErrorCode
     Reset( CConfig aConfig ) NOEXCEPT
     {
         // TODO: implement
-        return KOk;
+        return AbstractPlatform::KOk;
     }
 
-    int GetConfig( CConfig& aConfig ) NOEXCEPT;
-    int SetConfig( const CConfig& aConfig ) NOEXCEPT;
+    AbstractPlatform::TErrorCode GetConfig( CConfig& aConfig ) NOEXCEPT;
+    AbstractPlatform::TErrorCode SetConfig( const CConfig& aConfig ) NOEXCEPT;
 
 #ifdef __EXCEPTIONS
 
@@ -81,30 +51,6 @@ private:
     /* data */
     AbstractPlatform::IAbstractI2CBus& iI2CBus;
     const std::uint8_t iDeviceAddress;
-
-#ifdef __EXCEPTIONS
-    static inline int
-    ThrowOnError( int aErrorCode )
-    {
-        switch ( aErrorCode )
-        {
-        case KOk:
-            return aErrorCode;
-            break;
-        case KInvalidArgumentError:
-            throw EInvalidArgumentError{ };
-            break;
-        case KInvalidVendor:
-            throw EInvalidVendorError{ };
-            break;
-        case KGenericError:
-        default:
-            throw EGenericError{ };
-            break;
-        }
-        return aErrorCode;
-    }
-#endif
 };
 
 }  // namespace ExternalHardware

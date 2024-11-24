@@ -1,4 +1,4 @@
-#include "SSD1306.hpp"
+#include <ExternalHardware/ssd1306/SSD1306.hpp>
 
 #include <functional>
 #include <algorithm>
