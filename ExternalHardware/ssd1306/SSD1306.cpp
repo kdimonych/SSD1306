@@ -15,38 +15,6 @@ CSsd1306::CSsd1306( AbstractPlatform::IAbstractI2CBus& aI2CBus,
 {
 }
 
-template < typename taRegisterType >
-AbstractPlatform::TErrorCode
-CSsd1306::ReadRegister( std::uint8_t aRegisterAddress, taRegisterType& aRegisterValue ) NOEXCEPT
-{
-    const auto result
-        = aRegisterAddress == iLastRegisterAddress
-              ? iI2CBus.ReadLastRegisterRaw( iDeviceAddress, aRegisterValue )
-              : iI2CBus.ReadRegisterRaw( iDeviceAddress, aRegisterAddress, aRegisterValue );
-    if ( result )
-    {
-        iLastRegisterAddress = aRegisterAddress;
-        aRegisterValue = ChangeEndian( aRegisterValue );
-        return AbstractPlatform::KOk;
-    }
-    return AbstractPlatform::KGenericError;
-}
-
-template < typename taRegisterType >
-AbstractPlatform::TErrorCode
-CSsd1306::WriteRegister( std::uint8_t aRegisterAddress, taRegisterType aRegisterValue ) NOEXCEPT
-{
-    aRegisterValue = ChangeEndian( aRegisterValue );
-    const auto result
-        = iI2CBus.WriteRegisterRaw( iDeviceAddress, aRegisterAddress, aRegisterValue );
-    if ( result )
-    {
-        iLastRegisterAddress = aRegisterAddress;
-        return AbstractPlatform::KOk;
-    }
-    return AbstractPlatform::KGenericError;
-}
-
 AbstractPlatform::TErrorCode
 CSsd1306::SendCommand( uint8_t aCommand, bool aNoStop ) NOEXCEPT
 {
