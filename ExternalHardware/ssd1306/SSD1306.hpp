@@ -91,8 +91,6 @@ public:
         assert( aStartPage & 0x07 == aStartPage );
         assert( aEndPage & 0x07 == aEndPage );
         assert( aStartPage <= aEndPage );
-        assert( static_cast< std::uint8_t >( aScrollStepInterval )
-                & 0x07 == static_cast< std::uint8_t >( aScrollStepInterval ) );
 
         const std::uint8_t commands[]
             = { static_cast< std::uint8_t >( KCommand | aScrollDirectionLeft ),
@@ -168,9 +166,97 @@ public:
         return SendCommands( commands, ArrayLength( commands ) );
     }
 
-#ifdef __EXCEPTIONS
+    // Addressing Setting Command
+    TErrorCode inline SetLowerColumnStartAddress( std::uint8_t aStartAddress ) NOEXCEPT
+    {
+        assert( aStartAddress & 0x0F == aStartAddress );
+        return SendCommand( static_cast< std::uint8_t >( aStartAddress & 0x0F ) );
+    }
 
-#endif
+    TErrorCode inline SetHigherColumnStartAddress( std::uint8_t aStartAddress ) NOEXCEPT
+    {
+        constexpr std::uint8_t KCmdCSetLowerColumnStartAddress = 0x10;
+        assert( aStartAddress & 0x0F == aStartAddress );
+        return SendCommand(
+            static_cast< std::uint8_t >( KCmdCSetLowerColumnStartAddress | aStartAddress & 0x0F ) );
+    }
+
+    // Scrolling Command
+    enum MemoryAddressingMode
+    {
+        HorizontalAddressingMode = 0x00,
+        VerticalAddressingMode = 0x01,
+        PageAddressingMode = 0x02
+    };
+
+    TErrorCode inline SetMemoryAddressingMode( MemoryAddressingMode aMemoryAddressingMode
+                                               = MemoryAddressingMode::PageAddressingMode ) NOEXCEPT
+    {
+        constexpr std::uint8_t KCmdSetMemoryAddressingMode = 0x20;
+
+        return SendCommand( static_cast< std::uint8_t >(
+            KCmdSetMemoryAddressingMode | static_cast< std::uint8_t >( aMemoryAddressingMode ) ) );
+    }
+
+    TErrorCode
+    SetColumnAddress( std::uint8_t aColumnStartAddress, std::uint8_t aColumnEndAddress ) NOEXCEPT
+    {
+        using namespace AbstractPlatform;
+        constexpr std::uint8_t KCmdSetColumnAddress = 0x21;
+
+        assert( aColumnStartAddress & 0x7F == aColumnStartAddress );
+        assert( aColumnEndAddress & 0x7F == aColumnEndAddress );
+
+        const std::uint8_t commands[] = {
+            KCmdSetColumnAddress,
+            static_cast< std::uint8_t >( aColumnStartAddress & 0x7F ),
+            static_cast< std::uint8_t >( aColumnEndAddress & 0x7F ),
+        };
+
+        return SendCommands( commands, ArrayLength( commands ) );
+    }
+
+    TErrorCode
+    SetPageAddress( std::uint8_t aPageStartAddress, std::uint8_t aPageEndAddress ) NOEXCEPT
+    {
+        using namespace AbstractPlatform;
+        constexpr std::uint8_t KCmdSetColumnAddress = 0x22;
+
+        assert( aPageStartAddress & 0x07 == aPageStartAddress );
+        assert( aPageEndAddress & 0x07 == aPageEndAddress );
+
+        const std::uint8_t commands[] = {
+            KCmdSetColumnAddress,
+            static_cast< std::uint8_t >( aPageStartAddress & 0x07 ),
+            static_cast< std::uint8_t >( aPageEndAddress & 0x07 ),
+        };
+
+        return SendCommands( commands, ArrayLength( commands ) );
+    }
+
+    TErrorCode inline SetPageStartAddress( std::uint8_t aPageStartAddress ) NOEXCEPT
+    {
+        constexpr std::uint8_t KCmdPageStartAddress = 0xB0;
+        assert( aPageStartAddress & 0x07 == aPageStartAddress );
+        return SendCommand(
+            static_cast< std::uint8_t >( KCmdPageStartAddress | aPageStartAddress & 0x07 ) );
+    }
+
+    // Hardware Configuration (Panel resolution & layout related) Command
+    TErrorCode inline SetDisplayStartLine( std::uint8_t aDisplayStartLine ) NOEXCEPT
+    {
+        constexpr std::uint8_t KCmdSetDisplayStartLine = 0x40;
+        assert( aDisplayStartLine & 0x3F == aDisplayStartLine );
+        return SendCommand(
+            static_cast< std::uint8_t >( KCmdSetDisplayStartLine | aDisplayStartLine & 0x3F ) );
+    }
+
+    TErrorCode inline SetSegmentRemap( bool aSegmentRemapEnabled = false ) NOEXCEPT
+    {
+        constexpr std::uint8_t KSegmentRemapDisabled = 0xA0;  // Column address 0 is mapped to SEG0
+        constexpr std::uint8_t KSegmentRemapEnabled = 0xA1;  // Column address 127 is mapped to SEG0
+        return SendCommand( aSegmentRemapEnabled ? KSegmentRemapEnabled : KSegmentRemapDisabled );
+    }
 
     TErrorCode SendCommand( uint8_t aCommand, bool aNoStop = false ) NOEXCEPT;
     TErrorCode SendCommands( const uint8_t* aCommands, size_t aCommandsNumber ) NOEXCEPT;
