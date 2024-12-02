@@ -3,10 +3,11 @@ cmake_minimum_required(VERSION 3.13)
 project(external-devices.ssd1306 C CXX)
 
 set(HEADER_LIST
+    ExternalHardware/ssd1306/SSD1306_HAL.hpp
     ExternalHardware/ssd1306/SSD1306.hpp)
 
 set(SOURCE_LIST
-    ExternalHardware/ssd1306/SSD1306.cpp)
+    ExternalHardware/ssd1306/SSD1306_HAL.cpp)
 
 # Add library cpp files
 add_library(external-devices.ssd1306 ${HEADER_LIST} ${SOURCE_LIST} ) 
