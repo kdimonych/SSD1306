@@ -39,6 +39,8 @@ public:
 
     static constexpr std::uint8_t KDefaultAddress = 0x3C;      // SA0 pulled to GND
     static constexpr std::uint8_t KAlternativeAddress = 0x3D;  // SA0 pulled to VS
+    static constexpr std::uint8_t KPixelWidth = taDisplayType::KPixelWidth;
+    static constexpr std::uint8_t KPixelHight = taDisplayType::KPixelHight;
     static constexpr std::uint8_t KPixelsPerPage = taDisplayType::KPixelsPerPage;
     static constexpr std::uint8_t KMaxColumns = taDisplayType::KPixelWidth;
     static constexpr std::uint8_t KMaxPages
@@ -503,8 +505,8 @@ class CSsd1306Hal
 template <>
 class CSsd1306Hal< Ssd1306128x32 > : public CSsd1306HalBase< Ssd1306128x32 >
 {
-    using TBase = CSsd1306Hal< Ssd1306128x32 >;
-    using CSsd1306HalBase< Ssd1306128x32 >::CSsd1306HalBase;
+    using TBase = CSsd1306HalBase< Ssd1306128x32 >;
+    using TBase::CSsd1306HalBase;
 
     void
     Init( )
@@ -513,7 +515,7 @@ class CSsd1306Hal< Ssd1306128x32 > : public CSsd1306HalBase< Ssd1306128x32 >
         SetMemoryAddressingMode( TMemoryAddressingMode::HorizontalAddressingMode );
         SetDisplayStartLine( 0 );
         SetSegmentRemap( true );
-        SetMultiplexRatio( KMaxPages - 1 );
+        SetMultiplexRatio( KPixelHight - 1 );
         SetCOMOutputScanDirection( TOutputScanDirection::ReverseDirectionScan );
         SetDisplayOffset( 0 );
 
@@ -539,8 +541,8 @@ class CSsd1306Hal< Ssd1306128x32 > : public CSsd1306HalBase< Ssd1306128x32 >
 template <>
 class CSsd1306Hal< Ssd1306128x64 > : public CSsd1306HalBase< Ssd1306128x64 >
 {
-    using TBase = CSsd1306Hal< Ssd1306128x64 >;
-    using CSsd1306HalBase< Ssd1306128x64 >::CSsd1306HalBase;
+    using TBase = CSsd1306HalBase< Ssd1306128x64 >;
+    using TBase::CSsd1306HalBase;
 
     void
     Init( )
@@ -549,7 +551,7 @@ class CSsd1306Hal< Ssd1306128x64 > : public CSsd1306HalBase< Ssd1306128x64 >
         SetMemoryAddressingMode( TMemoryAddressingMode::HorizontalAddressingMode );
         SetDisplayStartLine( 0 );
         SetSegmentRemap( true );
-        SetMultiplexRatio( KMaxPages - 1 );
+        SetMultiplexRatio( KPixelHight - 1 );
         SetCOMOutputScanDirection( TOutputScanDirection::ReverseDirectionScan );
         SetDisplayOffset( 0 );
 
