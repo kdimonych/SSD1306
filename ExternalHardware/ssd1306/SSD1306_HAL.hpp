@@ -8,6 +8,7 @@
 #include <AbstractPlatform/common/ErrorCode.hpp>
 #include <AbstractPlatform/common/ArrayHelper.hpp>
 #include <AbstractPlatform/i2c/AbstractI2C.hpp>
+#include <cstdio>
 
 namespace ExternalHardware
 {
@@ -92,7 +93,7 @@ public:
         constexpr std::uint8_t KCmdContrast = 0x81;
 
         const std::uint8_t commands[] = { KCmdContrast, aContrast };
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     // Scrolling Command
@@ -132,7 +133,7 @@ public:
                 static_cast< std::uint8_t >( aEndPage & 0x07 ),
                 KDummyByte,
                 KDummyEndByte };
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     TErrorCode
@@ -160,7 +161,7 @@ public:
                 static_cast< std::uint8_t >( aScrollStepInterval & 0x07 ),
                 static_cast< std::uint8_t >( aEndPage & 0x07 ),
                 static_cast< std::uint8_t >( aVerticalScrollOffset & 0x3F ) };
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     inline TErrorCode
@@ -193,7 +194,7 @@ public:
             static_cast< std::uint8_t >( aNumberOfRowsInScrollArea & 0x7F ),
         };
 
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     // Addressing Setting Command
@@ -223,10 +224,13 @@ public:
         TMemoryAddressingMode aMemoryAddressingMode
         = TMemoryAddressingMode::PageAddressingMode ) NOEXCEPT
     {
+        using namespace AbstractPlatform;
         constexpr std::uint8_t KCmdSetMemoryAddressingMode = 0x20;
 
-        return SendCommand( static_cast< std::uint8_t >(
-            KCmdSetMemoryAddressingMode | static_cast< std::uint8_t >( aMemoryAddressingMode ) ) );
+        const std::uint8_t commands[]
+            = { KCmdSetMemoryAddressingMode, static_cast< std::uint8_t >( aMemoryAddressingMode ) };
+
+        return SendCommands( commands );
     }
 
     TErrorCode
@@ -244,7 +248,7 @@ public:
             static_cast< std::uint8_t >( aColumnEndAddress & 0x7F ),
         };
 
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     TErrorCode
@@ -262,7 +266,7 @@ public:
             static_cast< std::uint8_t >( aPageEndAddress & 0x07 ),
         };
 
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     TErrorCode inline SetPageStartAddress( std::uint8_t aPageStartAddress ) NOEXCEPT
@@ -300,7 +304,7 @@ public:
         const std::uint8_t commands[]
             = { KCmdSetMultiplexRatio, static_cast< std::uint8_t >( aMultiplexRatio & 0x3F ) };
 
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     /// @brief COM Output Scan Direction
@@ -337,7 +341,7 @@ public:
         const std::uint8_t commands[]
             = { KCmdSetDisplayOffset, static_cast< std::uint8_t >( aDisplayOffset & 0x3F ) };
 
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     TErrorCode
@@ -358,7 +362,7 @@ public:
                 | ( aAlternativeCOMPinConfiguration ? KAlternativeCOMpinConfiguration
                                                     : KSequentialCOMPinConfiguration ) ) };
 
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     // Timing & Driving Scheme Setting Command
@@ -377,7 +381,7 @@ public:
             KCmdSetDisplayClock, static_cast< std::uint8_t >( ( aOscillatorFrequency << 4 )
                                                               | ( ( aDivideRatio - 1 ) & 0x0F ) ) };
 
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     TErrorCode
@@ -394,7 +398,7 @@ public:
             = { KCmdSetPreChargePeriod,
                 static_cast< std::uint8_t >( ( aPhase2Period << 4 ) | ( aPhase1Period & 0x0F ) ) };
 
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     enum TVCOMHDeselectLevel
@@ -413,7 +417,7 @@ public:
         const std::uint8_t commands[]
             = { KCmdSetVCOMHDeselectLevel, static_cast< std::uint8_t >( aDeselectLevel ) };
 
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     TErrorCode inline Nop( ) NOEXCEPT
@@ -433,7 +437,7 @@ public:
 
         const std::uint8_t commands[] = { KCmdEnablePumpSettings, aEnable ? KEnable : KDisable };
 
-        return SendCommands( commands, ArrayLength( commands ) );
+        return SendCommands( commands );
     }
 
     // Read commands
@@ -445,11 +449,12 @@ public:
         // this "data" can be a command or data to follow up a command
         // Co = 1, D/C = 0 => the driver expects a command
         constexpr std::uint8_t controlByte = 0x80;
+        printf( " %.2X", static_cast< size_t >( aCommand ) );
         if ( iI2CBus.WriteRegisterRaw( iDeviceAddress, controlByte, aCommand ) )
         {
-            return AbstractPlatform::KOk;
+            return AbstractPlatform::KGenericError;
         }
-        return AbstractPlatform::KGenericError;
+        return AbstractPlatform::KOk;
     }
 
     AbstractPlatform::TErrorCode
@@ -465,6 +470,14 @@ public:
             }
         }
         return result;
+    }
+
+    template < size_t taArrayElemets >
+    AbstractPlatform::TErrorCode
+    SendCommands( const uint8_t ( &aCommands )[ taArrayElemets ] ) NOEXCEPT
+    {
+        using namespace AbstractPlatform;
+        return SendCommands( aCommands, taArrayElemets );
     }
 
     AbstractPlatform::TErrorCode
@@ -505,42 +518,44 @@ class CSsd1306Hal
 template <>
 class CSsd1306Hal< Ssd1306128x32 > : public CSsd1306HalBase< Ssd1306128x32 >
 {
+public:
     using TBase = CSsd1306HalBase< Ssd1306128x32 >;
     using TBase::CSsd1306HalBase;
 
     void
     Init( )
     {
-        DisplayEnable( false );
-        SetMemoryAddressingMode( TMemoryAddressingMode::HorizontalAddressingMode );
-        SetDisplayStartLine( 0 );
-        SetSegmentRemap( true );
-        SetMultiplexRatio( KPixelHight - 1 );
-        SetCOMOutputScanDirection( TOutputScanDirection::ReverseDirectionScan );
-        SetDisplayOffset( 0 );
+        using namespace AbstractPlatform;
+        ThrowOnError( DisplayEnable( false ) );
+        ThrowOnError( SetMemoryAddressingMode( TMemoryAddressingMode::HorizontalAddressingMode ) );
+        ThrowOnError( SetDisplayStartLine( 0 ) );
+        ThrowOnError( SetSegmentRemap( true ) );  //+
+        ThrowOnError( SetMultiplexRatio( KPixelHight - 1 ) );
+        ThrowOnError( SetCOMOutputScanDirection( TOutputScanDirection::ReverseDirectionScan ) );
+        ThrowOnError( SetDisplayOffset( 0 ) );
 
         // set COM (common) pins hardware configuration. Board specific
         // magic number. 0x02 Works for 128x32 (false, false), 0x12 Possibly works for
         // 128x64. Other options 0x22, 0x32
-        SetCOMPinsHardwareConfiguration( false, false );
-        SetDisplayClock( 0x08, 0x01 );
-        SetPreChargePeriod( 0x0F, 0x01 );
-        SetVCOMHDeselectLevel( TVCOMHDeselectLevel::Level_0_83Vcc );
+        ThrowOnError( SetCOMPinsHardwareConfiguration( false, false ) );
+        ThrowOnError( SetDisplayClock( 0x08, 0x01 ) );
+        ThrowOnError( SetPreChargePeriod( 0x01, 0x0F ) );
+        ThrowOnError( SetVCOMHDeselectLevel( TVCOMHDeselectLevel::Level_0_83Vcc ) );
 
         /* display */
-        SetContrast( 0xFF );
-        EnableRamDisplay( true );
-        InverseDisplay( false );
-        EnablePumpSettings( true );
-        EnablePumpSettings( true );
-        DeactivateScroll( );
-        DisplayEnable( true );
+        ThrowOnError( SetContrast( 0xFF ) );
+        ThrowOnError( EnableRamDisplay( true ) );
+        ThrowOnError( InverseDisplay( false ) );
+        ThrowOnError( EnablePumpSettings( true ) );
+        ThrowOnError( DeactivateScroll( ) );
+        ThrowOnError( DisplayEnable( true ) );
     }
 };
 
 template <>
 class CSsd1306Hal< Ssd1306128x64 > : public CSsd1306HalBase< Ssd1306128x64 >
 {
+public:
     using TBase = CSsd1306HalBase< Ssd1306128x64 >;
     using TBase::CSsd1306HalBase;
 

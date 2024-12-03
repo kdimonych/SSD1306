@@ -10,6 +10,7 @@
 #include <memory>
 #include <cstring>
 #include <utility>
+#include <cmath>
 
 namespace ExternalHardware
 {
@@ -31,7 +32,7 @@ public:
     {
     }
 
-    void
+    inline void
     Init( )
     {
         iSsd1306Hal.Init( );
@@ -42,13 +43,13 @@ public:
     public:
         CRenderArea( CRenderArea&& ) = default;
 
-        size_t
+        inline size_t
         PixelWidth( ) const
         {
             return Columns( );
         }
 
-        size_t
+        inline size_t
         PixelHeight( ) const
         {
             return Pages( ) * TSsd1306Hal::KPixelsPerPage;
@@ -57,6 +58,9 @@ public:
         void
         SetPixel( size_t aX, size_t aY, bool enable )
         {
+            assert( aX < PixelWidth( ) );
+            assert( aY < PixelHeight( ) );
+
             using namespace AbstractPlatform;
             const auto pageIndex = GetPageIndexByPixelCoordinate( aX, aY );
             iBuffer[ pageIndex ]
@@ -66,6 +70,9 @@ public:
         void
         ClearPixel( size_t aX, size_t aY, bool enable )
         {
+            assert( aX < PixelWidth( ) );
+            assert( aY < PixelHeight( ) );
+
             using namespace AbstractPlatform;
             const auto pageIndex = GetPageIndexByPixelCoordinate( aX, aY );
             iBuffer[ pageIndex ]
@@ -75,6 +82,9 @@ public:
         void
         TogglePixel( size_t aX, size_t aY, bool enable )
         {
+            assert( aX < PixelWidth( ) );
+            assert( aY < PixelHeight( ) );
+
             using namespace AbstractPlatform;
             const auto pageIndex = GetPageIndexByPixelCoordinate( aX, aY );
             iBuffer[ pageIndex ]
@@ -84,9 +94,70 @@ public:
         bool
         GetPixel( size_t aX, size_t aY ) const
         {
+            assert( aX < PixelWidth( ) );
+            assert( aY < PixelHeight( ) );
+
             using namespace AbstractPlatform;
             const auto pageIndex = GetPageIndexByPixelCoordinate( aX, aY );
             return CheckBit( iBuffer[ pageIndex ], GetPagePixelBitIndexByPixelYCoordinate( aY ) );
+        }
+
+        void
+        DrawLine( int aFromX, int aFromY, int aToX, int aToY, bool aPixelOn )
+        {
+            assert( aFromX < PixelWidth( ) );
+            assert( aToX < PixelWidth( ) );
+            assert( aFromY < PixelHeight( ) );
+            assert( aToY < PixelHeight( ) );
+
+            if ( aToX < aFromX )
+            {
+                std::swap( aToX, aFromX );
+            }
+            if ( aToY < aFromY )
+            {
+                std::swap( aToX, aFromX );
+            }
+
+            int dx = std::abs( aToX - aFromX );
+            int sx = aFromX < aToX ? 1 : -1;
+            int dy = -std::abs( aToY - aFromY );
+            int sy = aFromY < aToY ? 1 : -1;
+            int err = dx + dy;
+            int e2;
+
+            while ( true )
+            {
+                SetPixel( aFromX, aFromY, aPixelOn );
+                if ( aFromX == aToX && aFromY == aToY )
+                {
+                    break;
+                }
+                e2 = 2 * err;
+
+                if ( e2 >= dy )
+                {
+                    err += dy;
+                    aFromX += sx;
+                }
+                if ( e2 <= dx )
+                {
+                    err += dx;
+                    aFromY += sy;
+                }
+            }
+        }
+
+        void
+        FillWith( bool aValue = true )
+        {
+            std::memset( iBuffer.get( ), static_cast< int >( aValue ), GetRawBufferLength( ) );
+        }
+
+        inline void
+        Clear( )
+        {
+            FillWith( false );
         }
 
         void
