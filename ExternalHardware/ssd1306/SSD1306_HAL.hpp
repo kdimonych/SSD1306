@@ -1,14 +1,14 @@
 #pragma once
 
-#include <cstdint>
-#include <cstring>
-#include <vector>
-#include <cassert>
 #include <AbstractPlatform/common/Platform.hpp>
 #include <AbstractPlatform/common/ErrorCode.hpp>
 #include <AbstractPlatform/common/ArrayHelper.hpp>
 #include <AbstractPlatform/i2c/AbstractI2C.hpp>
 #include <cstdio>
+#include <cstdint>
+#include <cstring>
+#include <vector>
+#include <cassert>
 
 namespace ExternalHardware
 {
@@ -46,6 +46,7 @@ public:
     static constexpr std::uint8_t KMaxColumns = taDisplayType::KPixelWidth;
     static constexpr std::uint8_t KMaxPages
         = static_cast< std::uint8_t >( ( taDisplayType::KPixelHight + 1 ) / KPixelsPerPage );
+    static constexpr size_t KRamSize = KMaxColumns * KMaxPages * KPixelsPerPage / 8;
 
     CSsd1306HalBase( AbstractPlatform::IAbstractI2CBus& aI2CBus,
                      std::uint8_t aDeviceAddress = KDefaultAddress ) NOEXCEPT
@@ -59,12 +60,12 @@ public:
 
     // Fundamental Command
     inline TErrorCode
-    EnableRamDisplay( bool aEnable ) NOEXCEPT
+    EnableFillWholeRamWith( bool aBitValue ) NOEXCEPT
     {
-        constexpr std::uint8_t KCmdEnableRamDisplay = 0xA4;  // Default
-        constexpr std::uint8_t KCmdDisableRamDisplay = 0xA5;
+        constexpr std::uint8_t KCmdSetAllOn = 0xA5;
+        constexpr std::uint8_t KCmdSetAllOff = 0xA4;
 
-        return SendCommand( aEnable ? KCmdEnableRamDisplay : KCmdDisableRamDisplay );
+        return SendCommand( aBitValue ? KCmdSetAllOn : KCmdSetAllOff );
     }
 
     inline TErrorCode
@@ -485,6 +486,8 @@ public:
                 size_t aBufferSize,
                 bool aAutoReleaseMemory = false ) NOEXCEPT
     {
+        assert( aBuffer != nullptr );
+
         // Control byte
         constexpr std::uint8_t controlByte = 0x40;
 
@@ -492,18 +495,61 @@ public:
         iDataBuffer[ 0 ] = controlByte;
         iDataBuffer.insert( iDataBuffer.end( ), aBuffer, aBuffer + aBufferSize );
 
-        const auto result
-            = iI2CBus.Write( iDeviceAddress, iDataBuffer.data( ), iDataBuffer.size( ), false );
+        const auto result = SendDataBuffer( );
 
         if ( aAutoReleaseMemory )
         {
             iDataBuffer.resize( 0u );
+            iDataBuffer.shrink_to_fit( );
         }
         return result == iDataBuffer.size( ) ? AbstractPlatform::KOk
                                              : AbstractPlatform::KGenericError;
     }
 
+    AbstractPlatform::TErrorCode
+    ClearRam( ) NOEXCEPT
+    {
+        // Control byte
+        constexpr std::uint8_t controlByte = 0x40;
+
+        /* clear screen RAM */
+        TErrorCode result = AbstractPlatform::KOk;
+        result = SetColumnAddress( 0, KMaxColumns - 1 );
+        if ( result != AbstractPlatform::KOk )
+        {
+            return result;
+        }
+        result = SetPageAddress( 0, KMaxPages - 1 );
+        if ( result != AbstractPlatform::KOk )
+        {
+            return result;
+        }
+
+        const bool autoReleaseMemory = iDataBuffer.size( ) == 0u;
+
+        iDataBuffer.resize( sizeof( controlByte ) + KRamSize, 0 );
+        iDataBuffer[ 0 ] = controlByte;
+
+        result = SendDataBuffer( );
+
+        if ( autoReleaseMemory )
+        {
+            iDataBuffer.resize( 0u );
+            iDataBuffer.shrink_to_fit( );
+        }
+        return result;
+    }
+
 private:
+    inline AbstractPlatform::TErrorCode
+    SendDataBuffer( ) NOEXCEPT
+    {
+        return iI2CBus.Write( iDeviceAddress, iDataBuffer.data( ), iDataBuffer.size( ), false )
+                       == iDataBuffer.size( )
+                   ? AbstractPlatform::KOk
+                   : AbstractPlatform::KGenericError;
+    }
+
     /* data */
     AbstractPlatform::IAbstractI2CBus& iI2CBus;
     const std::uint8_t iDeviceAddress;
@@ -544,10 +590,11 @@ public:
 
         /* display */
         ThrowOnError( SetContrast( 0xFF ) );
-        ThrowOnError( EnableRamDisplay( true ) );
         ThrowOnError( InverseDisplay( false ) );
         ThrowOnError( EnablePumpSettings( true ) );
         ThrowOnError( DeactivateScroll( ) );
+        ThrowOnError( ClearRam( ) );
+        ThrowOnError( EnableFillWholeRamWith( false ) );
         ThrowOnError( DisplayEnable( true ) );
     }
 };
@@ -562,30 +609,31 @@ public:
     void
     Init( )
     {
-        DisplayEnable( false );
-        SetMemoryAddressingMode( TMemoryAddressingMode::HorizontalAddressingMode );
-        SetDisplayStartLine( 0 );
-        SetSegmentRemap( true );
-        SetMultiplexRatio( KPixelHight - 1 );
-        SetCOMOutputScanDirection( TOutputScanDirection::ReverseDirectionScan );
-        SetDisplayOffset( 0 );
+        using namespace AbstractPlatform;
+        ThrowOnError( DisplayEnable( false ) );
+        ThrowOnError( SetMemoryAddressingMode( TMemoryAddressingMode::HorizontalAddressingMode ) );
+        ThrowOnError( SetDisplayStartLine( 0 ) );
+        ThrowOnError( SetSegmentRemap( true ) );  //+
+        ThrowOnError( SetMultiplexRatio( KPixelHight - 1 ) );
+        ThrowOnError( SetCOMOutputScanDirection( TOutputScanDirection::ReverseDirectionScan ) );
+        ThrowOnError( SetDisplayOffset( 0 ) );
 
         // set COM (common) pins hardware configuration. Board specific
         // magic number. 0x02 Works for 128x32 (false, false), 0x12 Possibly works for
         // 128x64. Other options 0x22, 0x32
-        SetCOMPinsHardwareConfiguration( true, false );
-        SetDisplayClock( 0x08, 0x01 );
-        SetPreChargePeriod( 0x0F, 0x01 );
-        SetVCOMHDeselectLevel( TVCOMHDeselectLevel::Level_0_83Vcc );
+        ThrowOnError( SetCOMPinsHardwareConfiguration( true, false ) );
+        ThrowOnError( SetDisplayClock( 0x08, 0x01 ) );
+        ThrowOnError( SetPreChargePeriod( 0x01, 0x0F ) );
+        ThrowOnError( SetVCOMHDeselectLevel( TVCOMHDeselectLevel::Level_0_83Vcc ) );
 
         /* display */
-        SetContrast( 0xFF );
-        EnableRamDisplay( true );
-        InverseDisplay( false );
-        EnablePumpSettings( true );
-        EnablePumpSettings( true );
-        DeactivateScroll( );
-        DisplayEnable( true );
+        ThrowOnError( SetContrast( 0xFF ) );
+        ThrowOnError( InverseDisplay( false ) );
+        ThrowOnError( EnablePumpSettings( true ) );
+        ThrowOnError( DeactivateScroll( ) );
+        ThrowOnError( ClearRam( ) );
+        ThrowOnError( EnableFillWholeRamWith( false ) );
+        ThrowOnError( DisplayEnable( true ) );
     }
 };
 

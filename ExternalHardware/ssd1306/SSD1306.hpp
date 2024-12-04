@@ -151,7 +151,7 @@ public:
         void
         FillWith( bool aValue = true )
         {
-            std::memset( iBuffer.get( ), static_cast< int >( aValue ), GetRawBufferLength( ) );
+            std::memset( iBuffer.get( ), aValue ? 0xFF : 0x00, GetRawBufferLength( ) );
         }
 
         inline void
@@ -253,6 +253,7 @@ public:
     {
         using namespace AbstractPlatform;
         const auto bufferSize = aArea.GetRawBufferLength( );
+        assert( bufferSize != 0u );
 
         iSsd1306Hal.SetColumnAddress( aArea.iBeginColumn, aArea.iLastColumn );
         iSsd1306Hal.SetPageAddress( aArea.iBeginPage, aArea.iLastPage );
