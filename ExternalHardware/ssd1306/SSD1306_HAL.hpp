@@ -234,36 +234,36 @@ public:
     }
 
     TErrorCode
-    SetColumnAddress( std::uint8_t aColumnStartAddress, std::uint8_t aColumnEndAddress ) NOEXCEPT
+    SetColumnAddress( std::uint8_t aColumnStartAddress, std::uint8_t aColumnLastAddress ) NOEXCEPT
     {
         using namespace AbstractPlatform;
         constexpr std::uint8_t KCmdSetColumnAddress = 0x21;
 
         assert( aColumnStartAddress < KMaxColumns );
-        assert( aColumnEndAddress < KMaxColumns );
+        assert( aColumnLastAddress < KMaxColumns );
 
         const std::uint8_t commands[] = {
             KCmdSetColumnAddress,
             static_cast< std::uint8_t >( aColumnStartAddress & 0x7F ),
-            static_cast< std::uint8_t >( aColumnEndAddress & 0x7F ),
+            static_cast< std::uint8_t >( aColumnLastAddress & 0x7F ),
         };
 
         return SendCommands( commands );
     }
 
     TErrorCode
-    SetPageAddress( std::uint8_t aPageStartAddress, std::uint8_t aPageEndAddress ) NOEXCEPT
+    SetPageAddress( std::uint8_t aPageStartAddress, std::uint8_t aPageLastAddress ) NOEXCEPT
     {
         using namespace AbstractPlatform;
         constexpr std::uint8_t KCmdSetColumnAddress = 0x22;
 
         assert( aPageStartAddress < KMaxPages );
-        assert( aPageEndAddress < KMaxPages );
+        assert( aPageLastAddress < KMaxPages );
 
         const std::uint8_t commands[] = {
             KCmdSetColumnAddress,
             static_cast< std::uint8_t >( aPageStartAddress & 0x07 ),
-            static_cast< std::uint8_t >( aPageEndAddress & 0x07 ),
+            static_cast< std::uint8_t >( aPageLastAddress & 0x07 ),
         };
 
         return SendCommands( commands );

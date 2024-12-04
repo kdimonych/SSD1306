@@ -185,7 +185,7 @@ public:
         inline size_t
         Columns( ) const NOEXCEPT
         {
-            return static_cast< size_t >( iBeginCol - iLastCol ) + 1u;
+            return static_cast< size_t >( iBeginColumn - iLastColumn ) + 1u;
         }
 
         inline size_t
@@ -198,7 +198,7 @@ public:
         GetRawBufferLength( ) const
         {
             assert( iBeginPage <= iLastPage );
-            assert( iBeginCol <= iLastCol );
+            assert( iBeginColumn <= iLastColumn );
 
             const size_t columns = Columns( );
             const size_t pages = Pages( );
@@ -215,37 +215,37 @@ public:
     private:
         friend class CSsd1306;
 
-        CRenderArea( std::uint8_t aBeginCol,
-                     std::uint8_t aLastCol,
+        CRenderArea( std::uint8_t aBeginColumn,
+                     std::uint8_t aLastColumn,
                      std::uint8_t aBeginPage,
                      std::uint8_t aLastPage )
-            : iBeginCol{ aBeginCol }
-            , iLastCol{ aLastCol }
+            : iBeginColumn{ aBeginColumn }
+            , iLastColumn{ aLastColumn }
             , iBeginPage{ aBeginPage }
             , iLastPage{ aLastPage }
             , iBuffer{ std::make_unique< TPage[] >( GetRawBufferLength( ) ) }
         {
         }
 
-        const std::uint8_t iBeginCol;
-        const std::uint8_t iLastCol;
+        const std::uint8_t iBeginColumn;
+        const std::uint8_t iLastColumn;
         const std::uint8_t iBeginPage;
         const std::uint8_t iLastPage;
         std::unique_ptr< TPage[] > iBuffer;
     };
 
     CRenderArea
-    CreateRenderArea( std::uint8_t aBeginCol = 0,
-                      std::uint8_t aLastCol = TSsd1306Hal::KMaxColumns - 1,
+    CreateRenderArea( std::uint8_t aBeginColumn = 0,
+                      std::uint8_t aLastColumn = TSsd1306Hal::KMaxColumns - 1,
                       std::uint8_t aBeginPage = 0,
-                      std::uint8_t aLastPag = TSsd1306Hal::KMaxPages - 1 )
+                      std::uint8_t aLastPage = TSsd1306Hal::KMaxPages - 1 )
     {
-        assert( aBeginCol < TSsd1306Hal::KMaxColumns );
-        assert( aLastCol < TSsd1306Hal::KMaxColumns );
+        assert( aBeginColumn < TSsd1306Hal::KMaxColumns );
+        assert( aLastColumn < TSsd1306Hal::KMaxColumns );
         assert( aBeginPage < TSsd1306Hal::KMaxPages );
-        assert( aLastPag < TSsd1306Hal::KMaxPages );
+        assert( aLastPage < TSsd1306Hal::KMaxPages );
 
-        return CRenderArea( aBeginCol, aLastCol, aBeginPage, aLastPag );
+        return CRenderArea( aBeginColumn, aLastColumn, aBeginPage, aLastPage );
     }
 
     void
@@ -254,7 +254,7 @@ public:
         using namespace AbstractPlatform;
         const auto bufferSize = aArea.GetRawBufferLength( );
 
-        iSsd1306Hal.SetColumnAddress( aArea.iBeginCol, aArea.iLastCol );
+        iSsd1306Hal.SetColumnAddress( aArea.iBeginColumn, aArea.iLastColumn );
         iSsd1306Hal.SetPageAddress( aArea.iBeginPage, aArea.iLastPage );
 
         iSsd1306Hal.SendBuffer( aArea.RawBuffer( ), bufferSize );
