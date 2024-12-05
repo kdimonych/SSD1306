@@ -103,7 +103,7 @@ public:
         }
 
         void
-        DrawLine( int aFromX, int aFromY, int aToX, int aToY, bool aPixelOn )
+        DrawLine( int aFromX, int aFromY, int aToX, int aToY, bool aPixelOn = true )
         {
             assert( aFromX < PixelWidth( ) );
             assert( aToX < PixelWidth( ) );
@@ -185,13 +185,13 @@ public:
         inline size_t
         Columns( ) const NOEXCEPT
         {
-            return static_cast< size_t >( iBeginColumn - iLastColumn ) + 1u;
+            return static_cast< size_t >( iLastColumn - iBeginColumn ) + 1u;
         }
 
         inline size_t
         Pages( ) const NOEXCEPT
         {
-            return static_cast< size_t >( iBeginPage - iLastPage ) + 1u;
+            return static_cast< size_t >( iLastPage - iBeginPage ) + 1u;
         }
 
         size_t

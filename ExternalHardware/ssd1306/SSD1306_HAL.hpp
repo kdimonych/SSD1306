@@ -450,7 +450,7 @@ public:
         // this "data" can be a command or data to follow up a command
         // Co = 1, D/C = 0 => the driver expects a command
         constexpr std::uint8_t controlByte = 0x80;
-        printf( " %.2X", static_cast< size_t >( aCommand ) );
+
         if ( iI2CBus.WriteRegisterRaw( iDeviceAddress, controlByte, aCommand ) )
         {
             return AbstractPlatform::KGenericError;
@@ -491,15 +491,15 @@ public:
         // Control byte
         constexpr std::uint8_t controlByte = 0x40;
 
-        iDataBuffer.reserve( sizeof( controlByte ) + aBufferSize );
+        iDataBuffer.resize( sizeof( controlByte ) + aBufferSize );
         iDataBuffer[ 0 ] = controlByte;
-        iDataBuffer.insert( iDataBuffer.end( ), aBuffer, aBuffer + aBufferSize );
+        std::copy( aBuffer, aBuffer + aBufferSize, std::next( iDataBuffer.begin( ) ) );
 
         const auto result = SendDataBuffer( );
 
         if ( aAutoReleaseMemory )
         {
-            iDataBuffer.resize( 0u );
+            iDataBuffer.clear( );
             iDataBuffer.shrink_to_fit( );
         }
         return result == iDataBuffer.size( ) ? AbstractPlatform::KOk
@@ -534,7 +534,7 @@ public:
 
         if ( autoReleaseMemory )
         {
-            iDataBuffer.resize( 0u );
+            iDataBuffer.clear( );
             iDataBuffer.shrink_to_fit( );
         }
         return result;
