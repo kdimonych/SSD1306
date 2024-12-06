@@ -17,7 +17,7 @@ target_sources(external-devices.ssd1306
     PUBLIC ${SOURCE_LIST}
 )
 
-target_link_libraries(external-devices.ssd1306 abstract-platform.common abstract-platform.i2c)
+target_link_libraries(external-devices.ssd1306 abstract-platform.common abstract-platform.i2c abstract-platform.output.display)
 
 # Add include directory
 target_include_directories(external-devices.ssd1306 PUBLIC ${CMAKE_CURRENT_LIST_DIR})

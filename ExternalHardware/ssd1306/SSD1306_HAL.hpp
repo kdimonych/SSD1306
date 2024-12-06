@@ -98,7 +98,7 @@ public:
     }
 
     // Scrolling Command
-    enum TScrollStepInterval
+    enum class TScrollStepInterval
     {
         Step2Frame = 0x07,
         Step3Frame = 0x04,
@@ -309,7 +309,7 @@ public:
     }
 
     /// @brief COM Output Scan Direction
-    enum TOutputScanDirection
+    enum class TOutputScanDirection
     {
         ForwardScanDirection
         = 0xC0,  // Normal mode (RESET) Scan from COM0 to COM[N –1], where N is the Multiplex ratio.
@@ -402,7 +402,7 @@ public:
         return SendCommands( commands );
     }
 
-    enum TVCOMHDeselectLevel
+    enum class TVCOMHDeselectLevel
     {
         Level_0_65Vcc = 0x00,
         Level_0_77Vcc = 0x20,  // (RESET)
@@ -410,7 +410,8 @@ public:
     };
 
     TErrorCode
-    SetVCOMHDeselectLevel( TVCOMHDeselectLevel aDeselectLevel = Level_0_77Vcc ) NOEXCEPT
+    SetVCOMHDeselectLevel( TVCOMHDeselectLevel aDeselectLevel
+                           = TVCOMHDeselectLevel::Level_0_77Vcc ) NOEXCEPT
     {
         using namespace AbstractPlatform;
         constexpr std::uint8_t KCmdSetVCOMHDeselectLevel = 0xDB;
@@ -527,37 +528,41 @@ template <>
 class CSsd1306Hal< Ssd1306128x32 > : public CSsd1306HalBase< Ssd1306128x32 >
 {
 public:
+    using TErrorCode = AbstractPlatform::TErrorCode;
     using TBase = CSsd1306HalBase< Ssd1306128x32 >;
     using TBase::CSsd1306HalBase;
 
-    void
-    Init( )
+    TErrorCode
+    Init( ) NOEXCEPT
     {
         using namespace AbstractPlatform;
-        ThrowOnError( DisplayEnable( false ) );
-        ThrowOnError( SetMemoryAddressingMode( TMemoryAddressingMode::HorizontalAddressingMode ) );
-        ThrowOnError( SetDisplayStartLine( 0 ) );
-        ThrowOnError( SetSegmentRemap( true ) );  //+
-        ThrowOnError( SetMultiplexRatio( KPixelHight - 1 ) );
-        ThrowOnError( SetCOMOutputScanDirection( TOutputScanDirection::ReverseDirectionScan ) );
-        ThrowOnError( SetDisplayOffset( 0 ) );
+        RETURN_ON_ERROR( DisplayEnable( false ) );
+        RETURN_ON_ERROR(
+            SetMemoryAddressingMode( TMemoryAddressingMode::HorizontalAddressingMode ) );
+        RETURN_ON_ERROR( SetDisplayStartLine( 0 ) );
+        RETURN_ON_ERROR( SetSegmentRemap( true ) );  //+
+        RETURN_ON_ERROR( SetMultiplexRatio( KPixelHight - 1 ) );
+        RETURN_ON_ERROR( SetCOMOutputScanDirection( TOutputScanDirection::ReverseDirectionScan ) );
+        RETURN_ON_ERROR( SetDisplayOffset( 0 ) );
 
         // set COM (common) pins hardware configuration. Board specific
         // magic number. 0x02 Works for 128x32 (false, false), 0x12 Possibly works for
         // 128x64. Other options 0x22, 0x32
-        ThrowOnError( SetCOMPinsHardwareConfiguration( false, false ) );
-        ThrowOnError( SetDisplayClock( 0x08, 0x01 ) );
-        ThrowOnError( SetPreChargePeriod( 0x01, 0x0F ) );
-        ThrowOnError( SetVCOMHDeselectLevel( TVCOMHDeselectLevel::Level_0_83Vcc ) );
+        RETURN_ON_ERROR( SetCOMPinsHardwareConfiguration( false, false ) );
+        RETURN_ON_ERROR( SetDisplayClock( 0x08, 0x01 ) );
+        RETURN_ON_ERROR( SetPreChargePeriod( 0x01, 0x0F ) );
+        RETURN_ON_ERROR( SetVCOMHDeselectLevel( TVCOMHDeselectLevel::Level_0_83Vcc ) );
 
         /* display */
-        ThrowOnError( SetContrast( 0xFF ) );
-        ThrowOnError( InverseDisplay( false ) );
-        ThrowOnError( EnablePumpSettings( true ) );
-        ThrowOnError( DeactivateScroll( ) );
-        ThrowOnError( ClearRam( ) );
-        ThrowOnError( EnableFillWholeRamWith( false ) );
-        ThrowOnError( DisplayEnable( true ) );
+        RETURN_ON_ERROR( SetContrast( 0xFF ) );
+        RETURN_ON_ERROR( InverseDisplay( false ) );
+        RETURN_ON_ERROR( EnablePumpSettings( true ) );
+        RETURN_ON_ERROR( DeactivateScroll( ) );
+        RETURN_ON_ERROR( ClearRam( ) );
+        RETURN_ON_ERROR( EnableFillWholeRamWith( false ) );
+        RETURN_ON_ERROR( DisplayEnable( true ) );
+
+        return AbstractPlatform::KOk;
     }
 };
 
@@ -565,37 +570,41 @@ template <>
 class CSsd1306Hal< Ssd1306128x64 > : public CSsd1306HalBase< Ssd1306128x64 >
 {
 public:
+    using TErrorCode = AbstractPlatform::TErrorCode;
     using TBase = CSsd1306HalBase< Ssd1306128x64 >;
     using TBase::CSsd1306HalBase;
 
-    void
-    Init( )
+    TErrorCode
+    Init( ) NOEXCEPT
     {
         using namespace AbstractPlatform;
-        ThrowOnError( DisplayEnable( false ) );
-        ThrowOnError( SetMemoryAddressingMode( TMemoryAddressingMode::HorizontalAddressingMode ) );
-        ThrowOnError( SetDisplayStartLine( 0 ) );
-        ThrowOnError( SetSegmentRemap( true ) );  //+
-        ThrowOnError( SetMultiplexRatio( KPixelHight - 1 ) );
-        ThrowOnError( SetCOMOutputScanDirection( TOutputScanDirection::ReverseDirectionScan ) );
-        ThrowOnError( SetDisplayOffset( 0 ) );
+        RETURN_ON_ERROR( DisplayEnable( false ) );
+        RETURN_ON_ERROR(
+            SetMemoryAddressingMode( TMemoryAddressingMode::HorizontalAddressingMode ) );
+        RETURN_ON_ERROR( SetDisplayStartLine( 0 ) );
+        RETURN_ON_ERROR( SetSegmentRemap( true ) );  //+
+        RETURN_ON_ERROR( SetMultiplexRatio( KPixelHight - 1 ) );
+        RETURN_ON_ERROR( SetCOMOutputScanDirection( TOutputScanDirection::ReverseDirectionScan ) );
+        RETURN_ON_ERROR( SetDisplayOffset( 0 ) );
 
         // set COM (common) pins hardware configuration. Board specific
         // magic number. 0x02 Works for 128x32 (false, false), 0x12 Possibly works for
         // 128x64. Other options 0x22, 0x32
-        ThrowOnError( SetCOMPinsHardwareConfiguration( true, false ) );
-        ThrowOnError( SetDisplayClock( 0x08, 0x01 ) );
-        ThrowOnError( SetPreChargePeriod( 0x01, 0x0F ) );
-        ThrowOnError( SetVCOMHDeselectLevel( TVCOMHDeselectLevel::Level_0_83Vcc ) );
+        RETURN_ON_ERROR( SetCOMPinsHardwareConfiguration( true, false ) );
+        RETURN_ON_ERROR( SetDisplayClock( 0x08, 0x01 ) );
+        RETURN_ON_ERROR( SetPreChargePeriod( 0x01, 0x0F ) );
+        RETURN_ON_ERROR( SetVCOMHDeselectLevel( TVCOMHDeselectLevel::Level_0_83Vcc ) );
 
         /* display */
-        ThrowOnError( SetContrast( 0xFF ) );
-        ThrowOnError( InverseDisplay( false ) );
-        ThrowOnError( EnablePumpSettings( true ) );
-        ThrowOnError( DeactivateScroll( ) );
-        ThrowOnError( ClearRam( ) );
-        ThrowOnError( EnableFillWholeRamWith( false ) );
-        ThrowOnError( DisplayEnable( true ) );
+        RETURN_ON_ERROR( SetContrast( 0xFF ) );
+        RETURN_ON_ERROR( InverseDisplay( false ) );
+        RETURN_ON_ERROR( EnablePumpSettings( true ) );
+        RETURN_ON_ERROR( DeactivateScroll( ) );
+        RETURN_ON_ERROR( ClearRam( ) );
+        RETURN_ON_ERROR( EnableFillWholeRamWith( false ) );
+        RETURN_ON_ERROR( DisplayEnable( true ) );
+
+        return AbstractPlatform::KOk;
     }
 };
 
