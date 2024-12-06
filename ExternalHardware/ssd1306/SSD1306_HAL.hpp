@@ -47,12 +47,12 @@ public:
     static constexpr std::uint8_t KMaxPages
         = static_cast< std::uint8_t >( ( taDisplayType::KPixelHight + 1 ) / KPixelsPerPage );
     static constexpr size_t KRamSize = KMaxColumns * KMaxPages * KPixelsPerPage / 8;
+    static constexpr std::uint8_t KCmdSetRamBuffer = 0x40;
 
     CSsd1306HalBase( AbstractPlatform::IAbstractI2CBus& aI2CBus,
                      std::uint8_t aDeviceAddress = KDefaultAddress ) NOEXCEPT
         : iI2CBus{ aI2CBus },
-          iDeviceAddress{ aDeviceAddress },
-          iDataBuffer{ }
+          iDeviceAddress{ aDeviceAddress }
     {
     }
 
@@ -481,38 +481,19 @@ public:
         return SendCommands( aCommands, taArrayElemets );
     }
 
-    AbstractPlatform::TErrorCode
-    SendBuffer( const uint8_t* aBuffer,
-                size_t aBufferSize,
-                bool aAutoReleaseMemory = false ) NOEXCEPT
+    inline AbstractPlatform::TErrorCode
+    SendRawBuffer( const uint8_t* aDataBuffer, size_t aBufferSize, bool aNoStop = false ) NOEXCEPT
     {
-        assert( aBuffer != nullptr );
+        assert( aDataBuffer != nullptr );
 
-        // Control byte
-        constexpr std::uint8_t controlByte = 0x40;
-
-        iDataBuffer.resize( sizeof( controlByte ) + aBufferSize );
-        iDataBuffer[ 0 ] = controlByte;
-        std::copy( aBuffer, aBuffer + aBufferSize, std::next( iDataBuffer.begin( ) ) );
-
-        const auto result = SendDataBuffer( );
-
-        if ( aAutoReleaseMemory )
-        {
-            iDataBuffer.clear( );
-            iDataBuffer.shrink_to_fit( );
-        }
-        return result == iDataBuffer.size( ) ? AbstractPlatform::KOk
-                                             : AbstractPlatform::KGenericError;
+        return iI2CBus.Write( iDeviceAddress, aDataBuffer, aBufferSize, aNoStop ) == aBufferSize
+                   ? AbstractPlatform::KOk
+                   : AbstractPlatform::KGenericError;
     }
 
     AbstractPlatform::TErrorCode
     ClearRam( ) NOEXCEPT
     {
-        // Control byte
-        constexpr std::uint8_t controlByte = 0x40;
-
-        /* clear screen RAM */
         TErrorCode result = AbstractPlatform::KOk;
         result = SetColumnAddress( 0, KMaxColumns - 1 );
         if ( result != AbstractPlatform::KOk )
@@ -525,35 +506,16 @@ public:
             return result;
         }
 
-        const bool autoReleaseMemory = iDataBuffer.size( ) == 0u;
-
-        iDataBuffer.resize( sizeof( controlByte ) + KRamSize, 0 );
-        iDataBuffer[ 0 ] = controlByte;
-
-        result = SendDataBuffer( );
-
-        if ( autoReleaseMemory )
-        {
-            iDataBuffer.clear( );
-            iDataBuffer.shrink_to_fit( );
-        }
-        return result;
+        /* clear screen RAM */
+        std::vector< std::uint8_t > dataBuffer( sizeof( KCmdSetRamBuffer ) + KRamSize, 0 );
+        dataBuffer[ 0 ] = KCmdSetRamBuffer;
+        return SendRawBuffer( dataBuffer.data( ), dataBuffer.size( ), false );
     }
 
 private:
-    inline AbstractPlatform::TErrorCode
-    SendDataBuffer( ) NOEXCEPT
-    {
-        return iI2CBus.Write( iDeviceAddress, iDataBuffer.data( ), iDataBuffer.size( ), false )
-                       == iDataBuffer.size( )
-                   ? AbstractPlatform::KOk
-                   : AbstractPlatform::KGenericError;
-    }
-
     /* data */
     AbstractPlatform::IAbstractI2CBus& iI2CBus;
     const std::uint8_t iDeviceAddress;
-    std::vector< std::uint8_t > iDataBuffer;
 };
 
 template < typename taDisplayType >

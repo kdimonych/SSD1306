@@ -63,8 +63,8 @@ public:
 
             using namespace AbstractPlatform;
             const auto pageIndex = GetPageIndexByPixelCoordinate( aX, aY );
-            iBuffer[ pageIndex ]
-                = SetBit( iBuffer[ pageIndex ], GetPagePixelBitIndexByPixelYCoordinate( aY ) );
+            auto& page = DisplayBuffer( )[ pageIndex ];
+            page = SetBit( page, GetPagePixelBitIndexByPixelYCoordinate( aY ) );
         }
 
         void
@@ -75,8 +75,8 @@ public:
 
             using namespace AbstractPlatform;
             const auto pageIndex = GetPageIndexByPixelCoordinate( aX, aY );
-            iBuffer[ pageIndex ]
-                = ClearBit( iBuffer[ pageIndex ], GetPagePixelBitIndexByPixelYCoordinate( aY ) );
+            auto& page = DisplayBuffer( )[ pageIndex ];
+            page = ClearBit( page, GetPagePixelBitIndexByPixelYCoordinate( aY ) );
         }
 
         void
@@ -87,8 +87,8 @@ public:
 
             using namespace AbstractPlatform;
             const auto pageIndex = GetPageIndexByPixelCoordinate( aX, aY );
-            iBuffer[ pageIndex ]
-                = ToggleBit( iBuffer[ pageIndex ], GetPagePixelBitIndexByPixelYCoordinate( aY ) );
+            auto& page = DisplayBuffer( )[ pageIndex ];
+            page = ToggleBit( page, GetPagePixelBitIndexByPixelYCoordinate( aY ) );
         }
 
         bool
@@ -99,7 +99,8 @@ public:
 
             using namespace AbstractPlatform;
             const auto pageIndex = GetPageIndexByPixelCoordinate( aX, aY );
-            return CheckBit( iBuffer[ pageIndex ], GetPagePixelBitIndexByPixelYCoordinate( aY ) );
+            const auto page = DisplayBuffer( )[ pageIndex ];
+            return CheckBit( page, GetPagePixelBitIndexByPixelYCoordinate( aY ) );
         }
 
         void
@@ -151,7 +152,7 @@ public:
         void
         FillWith( bool aValue = true )
         {
-            std::memset( iBuffer.get( ), aValue ? 0xFF : 0x00, GetRawBufferLength( ) );
+            std::memset( DisplayBuffer( ), aValue ? 0xFF : 0x00, GetDisplayBufferSize( ) );
         }
 
         inline void
@@ -167,7 +168,8 @@ public:
             assert( aPageIndex < Pages( ) );
 
             const auto pageIndex = aPageIndex * Columns( ) + aColumnIndex;
-            iBuffer[ pageIndex ] = aPage;
+            auto& page = DisplayBuffer( )[ pageIndex ];
+            page = aPage;
         }
 
         inline size_t
@@ -194,8 +196,14 @@ public:
             return static_cast< size_t >( iLastPage - iBeginPage ) + 1u;
         }
 
+        constexpr static inline size_t
+        GetControlCommandLength( )
+        {
+            return sizeof( TSsd1306Hal::KCmdSetRamBuffer );
+        }
+
         size_t
-        GetRawBufferLength( ) const
+        GetDisplayBufferSize( ) const
         {
             assert( iBeginPage <= iLastPage );
             assert( iBeginColumn <= iLastColumn );
@@ -207,12 +215,29 @@ public:
         }
 
         const std::uint8_t*
+        DisplayBuffer( ) const NOEXCEPT
+        {
+            return iBuffer.get( ) + GetControlCommandLength( );
+        }
+
+    private:
+        std::uint8_t*
+        DisplayBuffer( ) NOEXCEPT
+        {
+            return iBuffer.get( ) + GetControlCommandLength( );
+        }
+        inline std::uint8_t*
         RawBuffer( ) const NOEXCEPT
         {
             return iBuffer.get( );
         }
 
-    private:
+        inline size_t
+        RawBufferSize( ) const
+        {
+            return GetControlCommandLength( ) + GetDisplayBufferSize( );
+        }
+
         friend class CSsd1306;
 
         CRenderArea( std::uint8_t aBeginColumn,
@@ -223,8 +248,9 @@ public:
             , iLastColumn{ aLastColumn }
             , iBeginPage{ aBeginPage }
             , iLastPage{ aLastPage }
-            , iBuffer{ std::make_unique< TPage[] >( GetRawBufferLength( ) ) }
+            , iBuffer{ std::make_unique< TPage[] >( RawBufferSize( ) ) }
         {
+            iBuffer[ 0 ] = TSsd1306Hal::KCmdSetRamBuffer;
         }
 
         const std::uint8_t iBeginColumn;
@@ -252,13 +278,14 @@ public:
     Render( const CRenderArea& aArea )
     {
         using namespace AbstractPlatform;
-        const auto bufferSize = aArea.GetRawBufferLength( );
-        assert( bufferSize != 0u );
+        const auto rawBufferSize = aArea.RawBufferSize( );
+        assert( rawBufferSize != 0u );
+        assert( aArea.RawBuffer( ) != nullptr );
 
         iSsd1306Hal.SetColumnAddress( aArea.iBeginColumn, aArea.iLastColumn );
         iSsd1306Hal.SetPageAddress( aArea.iBeginPage, aArea.iLastPage );
 
-        iSsd1306Hal.SendBuffer( aArea.RawBuffer( ), bufferSize );
+        iSsd1306Hal.SendRawBuffer( aArea.RawBuffer( ), rawBufferSize );
     }
 
 private:
