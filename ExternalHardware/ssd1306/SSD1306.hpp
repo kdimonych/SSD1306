@@ -24,7 +24,7 @@ private:
 public:
     using TPage = typename TSsd1306Hal::TPage;
     using TErrorCode = AbstractPlatform::TErrorCode;
-    using TDrawer = AbstractPlatform::CDrawer< AbstractPlatform::BitPixel >;
+    using TDrawer = AbstractPlatform::CDrawer< AbstractPlatform::TBitPixel >;
     using TAbstractCanvas = typename TDrawer::TAbstractCanvas;
 
     CSsd1306( AbstractPlatform::IAbstractI2CBus& aI2CBus,
@@ -39,28 +39,53 @@ public:
         return iSsd1306Hal.Init( );
     }
 
-    class CRenderArea : public TAbstractCanvas
+    class CRenderAreaBase
     {
     public:
-        using TPixel = typename TAbstractCanvas::TPixel;
+        using TPosition = AbstractPlatform::TPosition;
 
-        CRenderArea( CRenderArea&& ) = default;
-        virtual ~CRenderArea( ) = default;
-
-        int
-        PixelWidth( ) const override
+    protected:
+        CRenderAreaBase( std::uint8_t aBeginColumn,
+                         std::uint8_t aLastColumn,
+                         std::uint8_t aBeginPage,
+                         std::uint8_t aLastPage )
+            : iBeginColumn{ aBeginColumn }
+            , iLastColumn{ aLastColumn }
+            , iBeginPage{ aBeginPage }
+            , iLastPage{ aLastPage }
+            , iColumns{ Columns( aBeginColumn, aLastColumn ) }
+            , iRows{ Rows( aBeginPage, aLastPage ) }
+            , iCurrentPagePixelBitIndex{ 0 }
+            , iCurrentPageIndex{ 0 }
         {
-            return GetPixelWidth( );
         }
 
-        int
-        PixelHeight( ) const override
+        constexpr inline int
+        GetPixelWidth( ) const
         {
-            return GetPixelHeight( );
+            return static_cast< int >( iColumns );
         }
 
-        TPosition
-        GetPosition( ) const override
+        constexpr inline int
+        GetPixelHeight( ) const
+        {
+            return static_cast< int >( iRows * TSsd1306Hal::KPixelsPerPage );
+        }
+
+        static constexpr inline std::uint8_t
+        Columns( std::uint8_t aBeginColumn, std::uint8_t aLastColumn )
+        {
+            return static_cast< std::uint8_t >( aLastColumn - aBeginColumn + 1u );
+        }
+
+        static constexpr inline std::uint8_t
+        Rows( std::uint8_t aBeginPage, std::uint8_t aLastPage )
+        {
+            return static_cast< std::uint8_t >( aLastPage - aBeginPage + 1u );
+        }
+
+        inline TPosition
+        GetPositionImpl( ) const
         {
             const size_t x = iCurrentPageIndex % iColumns;
             const size_t y = iCurrentPageIndex / iColumns * TSsd1306Hal::KPixelsPerPage
@@ -69,8 +94,8 @@ public:
             return result;
         }
 
-        void
-        SetPosition( int aX, int aY ) override
+        inline void
+        SetPositionImpl( int aX, int aY )
         {
             assert( aX >= 0 );
             assert( aY >= 0 );
@@ -81,29 +106,91 @@ public:
             iCurrentPagePixelBitIndex = GetPagePixelBitIndexByPixelYCoordinate( aY );
         }
 
+        inline size_t
+        GetPageIndexByPixelCoordinate( size_t aX, size_t aY ) const
+        {
+            return GetPageIndexByPixelCoordinate( iColumns, aX, aY );
+        }
+
+        static constexpr inline TPage
+        GetPagePixelBitIndexByPixelYCoordinate( size_t aY )
+        {
+            return aY % TSsd1306Hal::KPixelsPerPage;
+        }
+
+        static constexpr inline size_t
+        GetPageIndexByPixelCoordinate( size_t aColumns, size_t aX, size_t aY )
+        {
+            return ( aY / TSsd1306Hal::KPixelsPerPage ) * aColumns + aX;
+        }
+
+        const std::uint8_t iBeginColumn;
+        const std::uint8_t iLastColumn;
+        const std::uint8_t iBeginPage;
+        const std::uint8_t iLastPage;
+        const std::uint8_t iColumns;
+        const std::uint8_t iRows;
+        std::uint8_t iCurrentPagePixelBitIndex;
+        size_t iCurrentPageIndex;
+    };
+
+    class CRenderArea : public CRenderAreaBase, public TAbstractCanvas
+    {
+    public:
+        using TPixel = typename TAbstractCanvas::TPixel;
+        using TPosition = typename CRenderAreaBase::TPosition;
+
+        CRenderArea( CRenderArea&& ) = default;
+        virtual ~CRenderArea( ) = default;
+
+        int
+        PixelWidth( ) const override
+        {
+            return CRenderAreaBase::GetPixelWidth( );
+        }
+
+        int
+        PixelHeight( ) const override
+        {
+            return CRenderAreaBase::GetPixelHeight( );
+        }
+
+        TPosition
+        GetPosition( ) const override
+        {
+            return CRenderAreaBase::GetPositionImpl( );
+        }
+
+        void
+        SetPosition( int aX, int aY ) override
+        {
+            CRenderAreaBase::SetPositionImpl( aX, aY );
+        }
+
         void
         SetPixel( TPixel aPixelValue ) override
         {
             using namespace AbstractPlatform;
-            auto& page = DisplayBuffer( )[ iCurrentPageIndex ];
-            page = aPixelValue.iPixelValue ? SetBit( page, iCurrentPagePixelBitIndex )
-                                           : ClearBit( page, iCurrentPagePixelBitIndex );
+            auto& page = DisplayBuffer( )[ CRenderAreaBase::iCurrentPageIndex ];
+            page = aPixelValue.iPixelValue
+                       ? SetBit( page, CRenderAreaBase::iCurrentPagePixelBitIndex )
+                       : ClearBit( page, CRenderAreaBase::iCurrentPagePixelBitIndex );
         }
 
         void
         InvertPixel( ) override
         {
             using namespace AbstractPlatform;
-            auto& page = DisplayBuffer( )[ iCurrentPageIndex ];
-            page = ToggleBit( page, iCurrentPagePixelBitIndex );
+            auto& page = DisplayBuffer( )[ CRenderAreaBase::iCurrentPageIndex ];
+            page = ToggleBit( page, CRenderAreaBase::iCurrentPagePixelBitIndex );
         }
 
         TPixel
         GetPixel( ) const override
         {
             using namespace AbstractPlatform;
-            const auto page = DisplayBuffer( )[ iCurrentPageIndex ];
-            return TPixel{ CheckBit( page, iCurrentPagePixelBitIndex ) };
+            const auto page = DisplayBuffer( )[ CRenderAreaBase::iCurrentPageIndex ];
+            return TPixel{ CheckBit( page, CRenderAreaBase::iCurrentPagePixelBitIndex ) };
         }
 
         void
@@ -113,33 +200,33 @@ public:
                          GetDisplayBufferSize( ) );
         }
 
-        void
-        SetPage( size_t aColumnIndex, size_t aPageIndex, TPage aPage )
+        constexpr inline size_t
+        Rows( ) const NOEXCEPT
         {
-            assert( aColumnIndex < iColumns );
-            assert( aPageIndex < iRows );
-
-            const auto pageIndex = aPageIndex * iColumns + aColumnIndex;
-            auto& page = DisplayBuffer( )[ pageIndex ];
-            page = aPage;
+            return CRenderAreaBase::iRows;
         }
 
         constexpr inline size_t
         Columns( ) const NOEXCEPT
         {
-            return iColumns;
+            return CRenderAreaBase::iColumns;
         }
 
-        constexpr inline size_t
-        Rows( ) const NOEXCEPT
+        void
+        SetPage( size_t aColumnIndex, size_t aPageIndex, TPage aPage )
         {
-            return iRows;
+            assert( aColumnIndex < CRenderAreaBase::iColumns );
+            assert( aPageIndex < CRenderAreaBase::iRows );
+
+            const auto pageIndex = aPageIndex * CRenderAreaBase::iColumns + aColumnIndex;
+            auto& page = DisplayBuffer( )[ pageIndex ];
+            page = aPage;
         }
 
         constexpr inline size_t
         GetDisplayBufferSize( ) const
         {
-            return iColumns * iRows;
+            return CRenderAreaBase::iColumns * CRenderAreaBase::iRows;
         }
 
         const std::uint8_t*
@@ -155,65 +242,16 @@ public:
                      std::uint8_t aLastColumn,
                      std::uint8_t aBeginPage,
                      std::uint8_t aLastPage )
-            : iBeginColumn{ aBeginColumn }
-            , iLastColumn{ aLastColumn }
-            , iBeginPage{ aBeginPage }
-            , iLastPage{ aLastPage }
-            , iColumns{ Columns( aBeginColumn, aLastColumn ) }
-            , iRows{ Rows( aBeginPage, aLastPage ) }
-            , iCurrentPagePixelBitIndex{ 0 }
-            , iCurrentPageIndex{ 0 }
+            : CRenderAreaBase{ aBeginColumn, aLastColumn, aBeginPage, aLastPage }
             , iBuffer{ std::make_unique< TPage[] >( RawBufferSize( ) ) }
         {
             iBuffer[ 0 ] = TSsd1306Hal::KCmdSetRamBuffer;
-        }
-
-        constexpr inline int
-        GetPixelWidth( ) const
-        {
-            return static_cast< int >( iColumns );
-        }
-
-        constexpr inline int
-        GetPixelHeight( ) const
-        {
-            return static_cast< int >( iRows * TSsd1306Hal::KPixelsPerPage );
         }
 
         constexpr static inline size_t
         GetControlCommandLength( )
         {
             return sizeof( TSsd1306Hal::KCmdSetRamBuffer );
-        }
-
-        inline size_t
-        GetPageIndexByPixelCoordinate( size_t aX, size_t aY ) const
-        {
-            return GetPageIndexByPixelCoordinate( iColumns, aX, aY );
-        }
-
-        static constexpr inline TPage
-        GetPagePixelBitIndexByPixelYCoordinate( size_t aY )
-        {
-            return aY % TSsd1306Hal::KPixelsPerPage;
-        }
-
-        static constexpr inline std::uint8_t
-        Columns( std::uint8_t aBeginColumn, std::uint8_t aLastColumn )
-        {
-            return static_cast< std::uint8_t >( aLastColumn - aBeginColumn + 1u );
-        }
-
-        static constexpr inline std::uint8_t
-        Rows( std::uint8_t aBeginPage, std::uint8_t aLastPage )
-        {
-            return static_cast< std::uint8_t >( aLastPage - aBeginPage + 1u );
-        }
-
-        static constexpr inline size_t
-        GetPageIndexByPixelCoordinate( size_t aColumns, size_t aX, size_t aY )
-        {
-            return ( aY / TSsd1306Hal::KPixelsPerPage ) * aColumns + aX;
         }
 
         std::uint8_t*
@@ -232,15 +270,6 @@ public:
         {
             return GetControlCommandLength( ) + GetDisplayBufferSize( );
         }
-
-        const std::uint8_t iBeginColumn;
-        const std::uint8_t iLastColumn;
-        const std::uint8_t iBeginPage;
-        const std::uint8_t iLastPage;
-        const std::uint8_t iColumns;
-        const std::uint8_t iRows;
-        std::uint8_t iCurrentPagePixelBitIndex;
-        size_t iCurrentPageIndex;
 
         std::unique_ptr< TPage[] > iBuffer;
     };
