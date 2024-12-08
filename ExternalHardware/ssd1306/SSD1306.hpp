@@ -59,6 +59,16 @@ public:
             return GetPixelHeight( );
         }
 
+        TPosition
+        GetPosition( ) const override
+        {
+            const size_t x = iCurrentPageIndex % iColumns;
+            const size_t y = iCurrentPageIndex / iColumns * TSsd1306Hal::KPixelsPerPage
+                             + iCurrentPagePixelBitIndex;
+            const TPosition result{ static_cast< int >( x ), static_cast< int >( y ) };
+            return result;
+        }
+
         void
         SetPosition( int aX, int aY ) override
         {
@@ -69,16 +79,6 @@ public:
 
             iCurrentPageIndex = GetPageIndexByPixelCoordinate( aX, aY );
             iCurrentPagePixelBitIndex = GetPagePixelBitIndexByPixelYCoordinate( aY );
-        }
-
-        Position
-        GetPosition( ) const override
-        {
-            const size_t x = iCurrentPageIndex % iColumns;
-            const size_t y = iCurrentPageIndex / iColumns * TSsd1306Hal::KPixelsPerPage
-                             + iCurrentPagePixelBitIndex;
-            const Position result{ static_cast< int >( x ), static_cast< int >( y ) };
-            return result;
         }
 
         void
