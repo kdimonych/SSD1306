@@ -47,25 +47,25 @@ public:
         using TPosition = AbstractPlatform::TPosition;
 
         int
-        PixelWidth( ) const override
+        PixelWidth( ) const NOEXCEPT override
         {
             return GetPixelWidth( );
         }
 
         int
-        PixelHeight( ) const override
+        PixelHeight( ) const NOEXCEPT override
         {
             return GetPixelHeight( );
         }
 
         TPosition
-        GetPosition( ) const override
+        GetPosition( ) const NOEXCEPT override
         {
             return GetPositionImpl( );
         }
 
         void
-        SetPosition( int aX, int aY ) override
+        SetPosition( int aX, int aY ) NOEXCEPT override
         {
             SetPositionImpl( aX, aY );
         }
@@ -170,7 +170,7 @@ public:
         virtual ~CRenderArea( ) = default;
 
         void
-        SetPixel( TPixel aPixelValue ) override
+        SetPixel( TPixel aPixelValue ) NOEXCEPT override
         {
             using namespace AbstractPlatform;
             auto& page = DisplayBuffer( )[ CRenderAreaNavigation::iCurrentPageIndex ];
@@ -179,16 +179,8 @@ public:
                        : ClearBit( page, CRenderAreaNavigation::iCurrentPagePixelBitIndex );
         }
 
-        void
-        InvertPixel( ) override
-        {
-            using namespace AbstractPlatform;
-            auto& page = DisplayBuffer( )[ CRenderAreaNavigation::iCurrentPageIndex ];
-            page = ToggleBit( page, CRenderAreaNavigation::iCurrentPagePixelBitIndex );
-        }
-
         TPixel
-        GetPixel( ) const override
+        GetPixel( ) const NOEXCEPT override
         {
             using namespace AbstractPlatform;
             const auto page = DisplayBuffer( )[ CRenderAreaNavigation::iCurrentPageIndex ];
@@ -196,7 +188,7 @@ public:
         }
 
         void
-        FillWith( TPixel aValue = TPixel{ } ) override
+        FillWith( TPixel aValue = TPixel{ } ) NOEXCEPT override
         {
             std::memset( DisplayBuffer( ), aValue.iPixelValue ? 0xFF : 0x00,
                          GetDisplayBufferSize( ) );
