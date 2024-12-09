@@ -25,7 +25,6 @@ public:
     using TPage = typename TSsd1306Hal::TPage;
     using TErrorCode = AbstractPlatform::TErrorCode;
     using TPixel = AbstractPlatform::TBitPixel;
-    using TDrawer = AbstractPlatform::CDrawer< TPixel >;
     using TAbstractCanvasNavigation = AbstractPlatform::TAbstractCanvasNavigation;
     using TAbstractReadOnlyCanvas = AbstractPlatform::TAbstractReadOnlyCanvas< TPixel >;
     using TAbstractCanvas = AbstractPlatform::TAbstractCanvas< TPixel >;
@@ -289,12 +288,6 @@ public:
         assert( aLastPage < TSsd1306Hal::KMaxPages );
 
         return CRenderArea( aBeginColumn, aLastColumn, aBeginPage, aLastPage );
-    }
-
-    static constexpr TDrawer
-    CreateDrawer( CRenderArea& aRenderArea )
-    {
-        return TDrawer( aRenderArea );
     }
 
     void
