@@ -24,8 +24,11 @@ private:
 public:
     using TPage = typename TSsd1306Hal::TPage;
     using TErrorCode = AbstractPlatform::TErrorCode;
-    using TDrawer = AbstractPlatform::CDrawer< AbstractPlatform::TBitPixel >;
-    using TAbstractCanvas = typename TDrawer::TAbstractCanvas;
+    using TPixel = AbstractPlatform::TBitPixel;
+    using TDrawer = AbstractPlatform::CDrawer< TPixel >;
+    using TAbstractCanvasNavigation = AbstractPlatform::TAbstractCanvasNavigation;
+    using TAbstractReadOnlyCanvas = AbstractPlatform::TAbstractReadOnlyCanvas< TPixel >;
+    using TAbstractCanvas = AbstractPlatform::TAbstractCanvas< TPixel >;
 
     CSsd1306( AbstractPlatform::IAbstractI2CBus& aI2CBus,
               std::uint8_t aDeviceAddress = TSsd1306Hal::KDefaultAddress ) NOEXCEPT
@@ -39,16 +42,40 @@ public:
         return iSsd1306Hal.Init( );
     }
 
-    class CRenderAreaBase
+    class CRenderAreaNavigation : virtual public TAbstractCanvasNavigation
     {
     public:
         using TPosition = AbstractPlatform::TPosition;
 
+        int
+        PixelWidth( ) const override
+        {
+            return GetPixelWidth( );
+        }
+
+        int
+        PixelHeight( ) const override
+        {
+            return GetPixelHeight( );
+        }
+
+        TPosition
+        GetPosition( ) const override
+        {
+            return GetPositionImpl( );
+        }
+
+        void
+        SetPosition( int aX, int aY ) override
+        {
+            SetPositionImpl( aX, aY );
+        }
+
     protected:
-        CRenderAreaBase( std::uint8_t aBeginColumn,
-                         std::uint8_t aLastColumn,
-                         std::uint8_t aBeginPage,
-                         std::uint8_t aLastPage )
+        CRenderAreaNavigation( std::uint8_t aBeginColumn,
+                               std::uint8_t aLastColumn,
+                               std::uint8_t aBeginPage,
+                               std::uint8_t aLastPage )
             : iBeginColumn{ aBeginColumn }
             , iLastColumn{ aLastColumn }
             , iBeginPage{ aBeginPage }
@@ -134,63 +161,39 @@ public:
         size_t iCurrentPageIndex;
     };
 
-    class CRenderArea : public CRenderAreaBase, public TAbstractCanvas
+    class CRenderArea : public TAbstractCanvas, public CRenderAreaNavigation
     {
     public:
         using TPixel = typename TAbstractCanvas::TPixel;
-        using TPosition = typename CRenderAreaBase::TPosition;
+        using TPosition = typename CRenderAreaNavigation::TPosition;
 
         CRenderArea( CRenderArea&& ) = default;
         virtual ~CRenderArea( ) = default;
-
-        int
-        PixelWidth( ) const override
-        {
-            return CRenderAreaBase::GetPixelWidth( );
-        }
-
-        int
-        PixelHeight( ) const override
-        {
-            return CRenderAreaBase::GetPixelHeight( );
-        }
-
-        TPosition
-        GetPosition( ) const override
-        {
-            return CRenderAreaBase::GetPositionImpl( );
-        }
-
-        void
-        SetPosition( int aX, int aY ) override
-        {
-            CRenderAreaBase::SetPositionImpl( aX, aY );
-        }
 
         void
         SetPixel( TPixel aPixelValue ) override
         {
             using namespace AbstractPlatform;
-            auto& page = DisplayBuffer( )[ CRenderAreaBase::iCurrentPageIndex ];
+            auto& page = DisplayBuffer( )[ CRenderAreaNavigation::iCurrentPageIndex ];
             page = aPixelValue.iPixelValue
-                       ? SetBit( page, CRenderAreaBase::iCurrentPagePixelBitIndex )
-                       : ClearBit( page, CRenderAreaBase::iCurrentPagePixelBitIndex );
+                       ? SetBit( page, CRenderAreaNavigation::iCurrentPagePixelBitIndex )
+                       : ClearBit( page, CRenderAreaNavigation::iCurrentPagePixelBitIndex );
         }
 
         void
         InvertPixel( ) override
         {
             using namespace AbstractPlatform;
-            auto& page = DisplayBuffer( )[ CRenderAreaBase::iCurrentPageIndex ];
-            page = ToggleBit( page, CRenderAreaBase::iCurrentPagePixelBitIndex );
+            auto& page = DisplayBuffer( )[ CRenderAreaNavigation::iCurrentPageIndex ];
+            page = ToggleBit( page, CRenderAreaNavigation::iCurrentPagePixelBitIndex );
         }
 
         TPixel
         GetPixel( ) const override
         {
             using namespace AbstractPlatform;
-            const auto page = DisplayBuffer( )[ CRenderAreaBase::iCurrentPageIndex ];
-            return TPixel{ CheckBit( page, CRenderAreaBase::iCurrentPagePixelBitIndex ) };
+            const auto page = DisplayBuffer( )[ CRenderAreaNavigation::iCurrentPageIndex ];
+            return TPixel{ CheckBit( page, CRenderAreaNavigation::iCurrentPagePixelBitIndex ) };
         }
 
         void
@@ -203,22 +206,22 @@ public:
         constexpr inline size_t
         Rows( ) const NOEXCEPT
         {
-            return CRenderAreaBase::iRows;
+            return CRenderAreaNavigation::iRows;
         }
 
         constexpr inline size_t
         Columns( ) const NOEXCEPT
         {
-            return CRenderAreaBase::iColumns;
+            return CRenderAreaNavigation::iColumns;
         }
 
         void
         SetPage( size_t aColumnIndex, size_t aPageIndex, TPage aPage )
         {
-            assert( aColumnIndex < CRenderAreaBase::iColumns );
-            assert( aPageIndex < CRenderAreaBase::iRows );
+            assert( aColumnIndex < CRenderAreaNavigation::iColumns );
+            assert( aPageIndex < CRenderAreaNavigation::iRows );
 
-            const auto pageIndex = aPageIndex * CRenderAreaBase::iColumns + aColumnIndex;
+            const auto pageIndex = aPageIndex * CRenderAreaNavigation::iColumns + aColumnIndex;
             auto& page = DisplayBuffer( )[ pageIndex ];
             page = aPage;
         }
@@ -226,7 +229,7 @@ public:
         constexpr inline size_t
         GetDisplayBufferSize( ) const
         {
-            return CRenderAreaBase::iColumns * CRenderAreaBase::iRows;
+            return CRenderAreaNavigation::iColumns * CRenderAreaNavigation::iRows;
         }
 
         const std::uint8_t*
@@ -242,7 +245,7 @@ public:
                      std::uint8_t aLastColumn,
                      std::uint8_t aBeginPage,
                      std::uint8_t aLastPage )
-            : CRenderAreaBase{ aBeginColumn, aLastColumn, aBeginPage, aLastPage }
+            : CRenderAreaNavigation{ aBeginColumn, aLastColumn, aBeginPage, aLastPage }
             , iBuffer{ std::make_unique< TPage[] >( RawBufferSize( ) ) }
         {
             iBuffer[ 0 ] = TSsd1306Hal::KCmdSetRamBuffer;
