@@ -87,25 +87,25 @@ public:
         {
         }
 
-        constexpr inline int
+        constexpr int
         GetPixelWidth( ) const
         {
             return static_cast< int >( iColumns );
         }
 
-        constexpr inline int
+        constexpr int
         GetPixelHeight( ) const
         {
             return static_cast< int >( iRows * TSsd1306Hal::KPixelsPerPage );
         }
 
-        static constexpr inline std::uint8_t
+        static constexpr std::uint8_t
         Columns( std::uint8_t aBeginColumn, std::uint8_t aLastColumn )
         {
             return static_cast< std::uint8_t >( aLastColumn - aBeginColumn + 1u );
         }
 
-        static constexpr inline std::uint8_t
+        static constexpr std::uint8_t
         Rows( std::uint8_t aBeginPage, std::uint8_t aLastPage )
         {
             return static_cast< std::uint8_t >( aLastPage - aBeginPage + 1u );
@@ -139,13 +139,13 @@ public:
             return GetPageIndexByPixelCoordinate( iColumns, aX, aY );
         }
 
-        static constexpr inline TPage
+        static constexpr TPage
         GetPagePixelBitIndexByPixelYCoordinate( size_t aY )
         {
             return aY % TSsd1306Hal::KPixelsPerPage;
         }
 
-        static constexpr inline size_t
+        static constexpr size_t
         GetPageIndexByPixelCoordinate( size_t aColumns, size_t aX, size_t aY )
         {
             return ( aY / TSsd1306Hal::KPixelsPerPage ) * aColumns + aX;
@@ -203,13 +203,13 @@ public:
                          GetDisplayBufferSize( ) );
         }
 
-        constexpr inline size_t
+        constexpr size_t
         Rows( ) const NOEXCEPT
         {
             return CRenderAreaNavigation::iRows;
         }
 
-        constexpr inline size_t
+        constexpr size_t
         Columns( ) const NOEXCEPT
         {
             return CRenderAreaNavigation::iColumns;
@@ -226,7 +226,7 @@ public:
             page = aPage;
         }
 
-        constexpr inline size_t
+        constexpr size_t
         GetDisplayBufferSize( ) const
         {
             return CRenderAreaNavigation::iColumns * CRenderAreaNavigation::iRows;
@@ -251,7 +251,7 @@ public:
             iBuffer[ 0 ] = TSsd1306Hal::KCmdSetRamBuffer;
         }
 
-        constexpr static inline size_t
+        static inline constexpr size_t
         GetControlCommandLength( )
         {
             return sizeof( TSsd1306Hal::KCmdSetRamBuffer );
