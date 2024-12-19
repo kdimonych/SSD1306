@@ -81,8 +81,9 @@ public:
             , iLastPage{ aLastPage }
             , iColumns{ Columns( aBeginColumn, aLastColumn ) }
             , iRows{ Rows( aBeginPage, aLastPage ) }
-            , iCurrentPagePixelBitIndex{ 0 }
             , iCurrentPageIndex{ 0 }
+            , iCurrentPagePixelBitIndex{ 0 }
+
         {
         }
 
@@ -156,8 +157,8 @@ public:
         const std::uint8_t iLastPage;
         const std::uint8_t iColumns;
         const std::uint8_t iRows;
-        std::uint8_t iCurrentPagePixelBitIndex;
         size_t iCurrentPageIndex;
+        std::uint8_t iCurrentPagePixelBitIndex;
     };
 
     class CRenderArea : public TAbstractCanvas, public CRenderAreaNavigation
