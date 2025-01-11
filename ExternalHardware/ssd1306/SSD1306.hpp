@@ -6,6 +6,7 @@
 #include <AbstractPlatform/output/display/AbstractDisplay.hpp>
 #include <ExternalHardware/ssd1306/SSD1306_HAL.hpp>
 
+#include <cassert>
 #include <memory>
 #include <cstring>
 #include <utility>

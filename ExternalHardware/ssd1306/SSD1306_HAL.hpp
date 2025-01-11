@@ -4,6 +4,7 @@
 #include <AbstractPlatform/common/ErrorCode.hpp>
 #include <AbstractPlatform/common/ArrayHelper.hpp>
 #include <AbstractPlatform/i2c/AbstractI2C.hpp>
+
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
